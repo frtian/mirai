@@ -17,6 +17,7 @@ GoRouter createAppRouter({
 }) {
   return GoRouter(
     initialLocation: '/',
+    overridePlatformDefaultLocation: true,
     debugLogDiagnostics: true,
     routes: [
       GoRoute(
