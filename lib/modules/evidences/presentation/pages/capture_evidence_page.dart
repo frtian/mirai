@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/camera/camera_service.dart';
 import '../../domain/entities/evidence.dart';
 import '../../domain/usecases/capture_evidence_usecase.dart';
-import 'evidence_test_page.dart';
+import 'capture_success_page.dart';
 
 class CaptureEvidencePage extends StatefulWidget {
   const CaptureEvidencePage({
@@ -62,7 +62,7 @@ class _CaptureEvidencePageState extends State<CaptureEvidencePage> {
       }
 
       await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => EvidenceTestPage(evidence: evidence)),
+        MaterialPageRoute(builder: (_) => CaptureSuccessPage(evidence: evidence)),
       );
     } catch (error) {
       if (mounted) {
