@@ -20,9 +20,9 @@ class AuthPageFooterWidget extends StatelessWidget {
         SizedBox(height: 24),
         Divider(color: AppColors.divider, thickness: 1),
         SizedBox(height: 18),
-        Text('MIRAI', style: AppTextStyles.footerBrand),
+        Text('ARARA', style: AppTextStyles.footerBrand),
         SizedBox(height: 12),
-        Text('© 2026 SEMARH MIRAI. All rights reserved.', textAlign: TextAlign.center, style: AppTextStyles.footerText),
+        Text('© 2026 SEMARH ARARA. All rights reserved.', textAlign: TextAlign.center, style: AppTextStyles.footerText),
         SizedBox(height: 14),
         Wrap(
           alignment: WrapAlignment.center,
