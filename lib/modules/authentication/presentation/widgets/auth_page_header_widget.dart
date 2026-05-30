@@ -9,7 +9,7 @@ class AuthPageHeaderWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Column(
       children: [
-        Text('MIRAI', style: AppTextStyles.brand),
+        Text('ARARA', style: AppTextStyles.brand),
         SizedBox(height: 22),
         Text('Monitoramento Ambiental', textAlign: TextAlign.center, style: AppTextStyles.pageTitle),
         SizedBox(height: 8),

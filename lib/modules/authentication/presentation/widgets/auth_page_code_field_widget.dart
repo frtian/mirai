@@ -5,9 +5,14 @@ import '../../../../design_system/app_text_styles.dart';
 import '../controller/auth_page_contrller.dart';
 
 class AuthPageCodeFieldWidget extends StatelessWidget {
-  const AuthPageCodeFieldWidget({super.key, required this.controller});
+  const AuthPageCodeFieldWidget({
+    super.key,
+    required this.controller,
+    required this.onSubmitted,
+  });
 
   final AuthPageContrller controller;
+  final VoidCallback onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +27,7 @@ class AuthPageCodeFieldWidget extends StatelessWidget {
             controller: controller.codeController,
             keyboardType: TextInputType.text,
             textInputAction: TextInputAction.done,
-            onFieldSubmitted: (_) => controller.submit(),
+            onFieldSubmitted: (_) => onSubmitted(),
             validator: controller.validateCode,
             style: AppTextStyles.inputHint,
             decoration: const InputDecoration(

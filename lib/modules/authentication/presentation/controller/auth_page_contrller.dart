@@ -8,15 +8,18 @@ class AuthPageContrller extends ChangeNotifier {
   final TextEditingController codeController = TextEditingController();
 
   bool _isSubmitting = false;
+  String? _submissionError;
 
   bool get isSubmitting => _isSubmitting;
+  String? get submissionError => _submissionError;
 
-  Future<void> submit() async {
+  Future<bool> submit() async {
     if (!(formKey.currentState?.validate() ?? false)) {
-      return;
+      return false;
     }
 
     _isSubmitting = true;
+    _submissionError = null;
     notifyListeners();
 
     try {
@@ -24,6 +27,10 @@ class AuthPageContrller extends ChangeNotifier {
       if (callback != null) {
         await callback(codeController.text.trim());
       }
+      return true;
+    } catch (_) {
+      _submissionError = 'Nao foi possivel validar o acesso.';
+      return false;
     } finally {
       _isSubmitting = false;
       notifyListeners();

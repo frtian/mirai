@@ -10,6 +10,13 @@ class AppTextStyles {
     letterSpacing: 0.8,
   );
 
+  static const appBarTitle = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    color: AppColors.headline,
+    height: 1.05,
+  );
+
   static const pageTitle = TextStyle(
     fontSize: 29,
     fontWeight: FontWeight.w700,

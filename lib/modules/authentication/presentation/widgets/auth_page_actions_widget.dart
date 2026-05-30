@@ -5,9 +5,14 @@ import '../../../../design_system/app_text_styles.dart';
 import '../controller/auth_page_contrller.dart';
 
 class AuthPageActionsWidget extends StatelessWidget {
-  const AuthPageActionsWidget({super.key, required this.controller});
+  const AuthPageActionsWidget({
+    super.key,
+    required this.controller,
+    required this.onSubmit,
+  });
 
   final AuthPageContrller controller;
+  final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +35,7 @@ class AuthPageActionsWidget extends StatelessWidget {
         SizedBox(
           height: 48,
           child: FilledButton(
-            onPressed: controller.isSubmitting ? null : controller.submit,
+            onPressed: controller.isSubmitting ? null : onSubmit,
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.onPrimary,
@@ -45,6 +50,14 @@ class AuthPageActionsWidget extends StatelessWidget {
                 : const Text('Entrar', style: AppTextStyles.action),
           ),
         ),
+        if (controller.submissionError != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            controller.submissionError!,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.body.copyWith(color: Colors.redAccent),
+          ),
+        ],
         const SizedBox(height: 16),
         const Row(
           mainAxisAlignment: MainAxisAlignment.center,

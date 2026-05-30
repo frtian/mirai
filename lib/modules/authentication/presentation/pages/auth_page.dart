@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/app_colors.dart';
 import '../controller/auth_page_contrller.dart';
@@ -30,6 +31,18 @@ class _AuthPageState extends State<AuthPage> {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  Future<void> _handleSubmit() async {
+    final isAuthenticated = await _controller.submit();
+    if (!mounted || !isAuthenticated) {
+      return;
+    }
+
+    final ownerCode = Uri.encodeQueryComponent(
+      _controller.codeController.text.trim(),
+    );
+    context.go('/home?ownerCode=$ownerCode');
   }
 
   @override
@@ -66,9 +79,15 @@ class _AuthPageState extends State<AuthPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          AuthPageCodeFieldWidget(controller: _controller),
+                          AuthPageCodeFieldWidget(
+                            controller: _controller,
+                            onSubmitted: _handleSubmit,
+                          ),
                           const SizedBox(height: 18),
-                          AuthPageActionsWidget(controller: _controller),
+                          AuthPageActionsWidget(
+                            controller: _controller,
+                            onSubmit: _handleSubmit,
+                          ),
                         ],
                       ),
                     ),
