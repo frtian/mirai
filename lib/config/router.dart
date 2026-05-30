@@ -3,13 +3,13 @@ import 'package:go_router/go_router.dart';
 import 'package:mirai/modules/navigation/presentation/pages/location_permission_guard_page.dart';
 import 'package:mirai/modules/navigation/presentation/pages/navigation_page.dart';
 
-/// App router configuration factory
+/// App router configuration factory with lazy-loaded camera page
 ///
 /// Routes:
 /// - / : LocationPermissionGuardPage (entry point)
 /// - /navigation : NavigationPage (after location verified)
-/// - /camera : CaptureEvidencePage (from navigation)
-GoRouter createAppRouter({required Widget cameraPage}) {
+/// - /camera : CaptureEvidencePage (lazy-loaded on first access)
+GoRouter createAppRouter({required Widget Function() cameraPageBuilder}) {
   return GoRouter(
     initialLocation: '/',
     debugLogDiagnostics: true,
@@ -35,7 +35,8 @@ GoRouter createAppRouter({required Widget cameraPage}) {
       GoRoute(
         path: '/camera',
         name: 'camera',
-        pageBuilder: (context, state) => MaterialPage(child: cameraPage),
+        pageBuilder: (context, state) =>
+            MaterialPage(child: cameraPageBuilder()),
       ),
     ],
     errorPageBuilder: (context, state) => MaterialPage(
