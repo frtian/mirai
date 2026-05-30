@@ -4,20 +4,8 @@ import 'package:mirai/modules/navigation/presentation/controllers/location_permi
 import 'package:mirai/modules/navigation/presentation/widgets/location_permission_dialog.dart';
 import 'package:mirai/modules/navigation/presentation/widgets/location_service_dialog.dart';
 
-/// Guard page that orchestrates location permission and service checks
-///
-/// Shows appropriate dialogs based on permission/service status:
-/// - If permission not granted: shows LocationPermissionDialog
-/// - If permission granted but service disabled: shows LocationServiceDialog
-/// - If both OK: calls onLocationReady callback or navigates to navigation page
-///
-/// Must be wrapped with ConsumerWidget to use Riverpod
 class LocationPermissionGuardPage extends ConsumerStatefulWidget {
-  /// Widget to show when location is ready (permission + service enabled)
-  /// If null, will navigate back with success result
   final Widget? navigationPage;
-
-  /// Callback when location is fully ready
   final VoidCallback? onLocationReady;
 
   const LocationPermissionGuardPage({
@@ -33,8 +21,10 @@ class LocationPermissionGuardPage extends ConsumerStatefulWidget {
 
 class _LocationPermissionGuardPageState
     extends ConsumerState<LocationPermissionGuardPage> {
-  /// Current guard stage
   late _GuardStage _currentStage;
+  bool _serviceDialogShown = false;
+  int _retryCount = 0;
+  static const int _maxRetries = 3;
 
   @override
   void initState() {
@@ -43,11 +33,13 @@ class _LocationPermissionGuardPageState
     _checkLocationStatus();
   }
 
-  /// Check location permission and service status
   Future<void> _checkLocationStatus() async {
     if (!mounted) return;
 
     try {
+      ref.invalidate(locationPermissionProvider);
+      ref.invalidate(locationServiceStatusProvider);
+
       final permission = await ref.read(locationPermissionProvider.future);
       final serviceStatus = await ref.read(
         locationServiceStatusProvider.future,
@@ -55,46 +47,92 @@ class _LocationPermissionGuardPageState
 
       if (!mounted) return;
 
+      _retryCount = 0;
+
       setState(() {
         if (!permission.isGranted) {
           _currentStage = _GuardStage.requestingPermission;
         } else if (!serviceStatus.isEnabled) {
           _currentStage = _GuardStage.requestingService;
+          _serviceDialogShown = false;
         } else {
           _currentStage = _GuardStage.ready;
         }
       });
 
-      // If already ready, proceed
       if (_currentStage == _GuardStage.ready) {
         _proceedToNavigation();
       }
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+
+      if (_retryCount < _maxRetries) {
+        _retryCount++;
+        await Future.delayed(Duration(milliseconds: 500 * _retryCount));
+        if (mounted) {
+          _checkLocationStatus();
+        }
+      } else {
         setState(() {
-          _currentStage = _GuardStage.error;
+          _currentStage = _GuardStage.checkingPermission;
         });
       }
     }
   }
 
-  /// Proceed to navigation page or call callback
   void _proceedToNavigation() {
     widget.onLocationReady?.call();
 
     if (widget.navigationPage != null) {
-      // Navigate to provided navigation page
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => widget.navigationPage!),
       );
     } else {
-      // Go back with success result
       Navigator.of(context).pop(true);
+    }
+  }
+
+  Future<void> _showServiceDialog() async {
+    if (_serviceDialogShown) return;
+    _serviceDialogShown = true;
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => LocationServiceDialog(
+        onServiceDisabled: () {
+          Navigator.of(context).pop('cancelled');
+        },
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (result == 'success') {
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) {
+        _retryCount = 0;
+        _checkLocationStatus();
+      }
+    } else {
+      _serviceDialogShown = false;
+      if (mounted) {
+        setState(() {
+          _currentStage = _GuardStage.checkingPermission;
+        });
+        _retryCount = 0;
+        _checkLocationStatus();
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_currentStage == _GuardStage.requestingService &&
+        !_serviceDialogShown) {
+      Future.microtask(() => _showServiceDialog());
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Verificando Localização'),
@@ -105,27 +143,23 @@ class _LocationPermissionGuardPageState
     );
   }
 
-  /// Build content based on current guard stage
   Widget _buildContent() {
     switch (_currentStage) {
       case _GuardStage.checkingPermission:
-        return _buildLoadingState('Verificando permissões...');
-
+        return _buildLoadingState(
+          _retryCount > 0
+              ? 'Tentando novamente... ($_retryCount/$_maxRetries)'
+              : 'Verificando permissões...',
+        );
       case _GuardStage.requestingPermission:
         return _buildPermissionDialog();
-
       case _GuardStage.requestingService:
-        return _buildServiceDialog();
-
+        return _buildLoadingState('Abrindo configurações...');
       case _GuardStage.ready:
         return _buildReadyState();
-
-      case _GuardStage.error:
-        return _buildErrorState();
     }
   }
 
-  /// Loading state UI
   Widget _buildLoadingState(String message) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -137,10 +171,10 @@ class _LocationPermissionGuardPageState
     );
   }
 
-  /// Permission dialog
   Widget _buildPermissionDialog() {
     return LocationPermissionDialog(
       onPermissionGranted: () {
+        _retryCount = 0;
         setState(() {
           _currentStage = _GuardStage.checkingPermission;
         });
@@ -153,6 +187,7 @@ class _LocationPermissionGuardPageState
             duration: Duration(seconds: 2),
           ),
         );
+        _retryCount = 0;
         setState(() {
           _currentStage = _GuardStage.checkingPermission;
         });
@@ -172,31 +207,6 @@ class _LocationPermissionGuardPageState
     );
   }
 
-  /// Service dialog
-  Widget _buildServiceDialog() {
-    return LocationServiceDialog(
-      onServiceEnabled: () {
-        setState(() {
-          _currentStage = _GuardStage.ready;
-        });
-        _proceedToNavigation();
-      },
-      onServiceDisabled: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Serviço de localização necessário'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-        setState(() {
-          _currentStage = _GuardStage.checkingPermission;
-        });
-        _checkLocationStatus();
-      },
-    );
-  }
-
-  /// Ready state UI
   Widget _buildReadyState() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -223,57 +233,11 @@ class _LocationPermissionGuardPageState
       ],
     );
   }
-
-  /// Error state UI
-  Widget _buildErrorState() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: Colors.red.shade100,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(Icons.error_outline, size: 40, color: Colors.red),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'Erro ao Verificar Localização',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 12),
-        Text('Tente novamente', style: Theme.of(context).textTheme.bodyMedium),
-        const SizedBox(height: 24),
-        ElevatedButton(
-          onPressed: () {
-            setState(() {
-              _currentStage = _GuardStage.checkingPermission;
-            });
-            _checkLocationStatus();
-          },
-          child: const Text('Tentar Novamente'),
-        ),
-      ],
-    );
-  }
 }
 
-/// Stages of location permission and service guard
 enum _GuardStage {
-  /// Initial stage: checking permission and service status
   checkingPermission,
-
-  /// Permission not granted: showing permission dialog
   requestingPermission,
-
-  /// Permission granted but service disabled: showing service dialog
   requestingService,
-
-  /// Both permission and service are ready
   ready,
-
-  /// Error occurred during checks
-  error,
 }
