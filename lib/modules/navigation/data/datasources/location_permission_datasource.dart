@@ -146,13 +146,13 @@ class LocationPermissionDatasource {
 
   /// Poll location service status
   ///
-  /// Useful for monitoring when user enables location service
-  /// Returns a stream that emits status every [intervalSeconds]
+  /// Emits status every [intervalSeconds] until service is enabled
   Stream<LocationServiceStatusModel> pollLocationServiceStatus({
     int intervalSeconds = 2,
     int maxAttempts = 30,
   }) async* {
     int attempts = 0;
+
     while (attempts < maxAttempts) {
       final status = await checkLocationServiceStatus();
       yield status;

@@ -2,42 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mirai/modules/navigation/presentation/controllers/location_permission_provider.dart';
 
-/// Dialog widget that requests user to enable location service
-///
-/// Shows when location permission is granted but GPS service is disabled
-/// Uses 'location' package to show native Android dialog without leaving app
-/// Monitors when user enables GPS and closes dialog automatically
-class LocationServiceDialog extends ConsumerStatefulWidget {
-  /// Callback when location service is enabled
-  final VoidCallback? onServiceEnabled;
-
-  /// Callback when user cancels or dialog times out
+class LocationServiceDialog extends ConsumerWidget {
   final VoidCallback? onServiceDisabled;
 
-  /// Maximum polling attempts before giving up (default: 30 = 60 seconds)
-  final int maxPollingAttempts;
-
-  /// Polling interval in seconds (default: 2 seconds)
-  final int pollingIntervalSeconds;
-
-  const LocationServiceDialog({
-    super.key,
-    this.onServiceEnabled,
-    this.onServiceDisabled,
-    this.maxPollingAttempts = 30,
-    this.pollingIntervalSeconds = 2,
-  });
+  const LocationServiceDialog({super.key, this.onServiceDisabled});
 
   @override
-  ConsumerState<LocationServiceDialog> createState() =>
-      _LocationServiceDialogState();
-}
-
-class _LocationServiceDialogState extends ConsumerState<LocationServiceDialog> {
-  bool _isWaitingForService = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return AlertDialog(
       title: const Text(
         'Ativar Localização',
@@ -48,7 +19,6 @@ class _LocationServiceDialogState extends ConsumerState<LocationServiceDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Large icon
             Center(
               child: Container(
                 width: 80,
@@ -112,8 +82,8 @@ class _LocationServiceDialogState extends ConsumerState<LocationServiceDialog> {
       actions: [
         TextButton(
           onPressed: () {
-            Navigator.of(context).pop();
-            widget.onServiceDisabled?.call();
+            Navigator.of(context).pop('cancelled');
+            onServiceDisabled?.call();
           },
           child: const Text('Cancelar'),
         ),
@@ -122,53 +92,39 @@ class _LocationServiceDialogState extends ConsumerState<LocationServiceDialog> {
             final requestState = ref.watch(requestLocationServiceProvider);
 
             return requestState.when(
-              loading: () {
-                // While waiting for native dialog response
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SizedBox(
-                    height: 40,
-                    child: Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                  ),
-                );
-              },
+              loading: () => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
               data: (enabled) {
-                // Service was enabled or user closed dialog
-                if (enabled && !_isWaitingForService) {
-                  _isWaitingForService = true;
-                  // Start polling to verify service is enabled
-                  Future.microtask(() => _startServicePolling(ref));
-                }
-
-                if (enabled) {
+                if (!enabled) {
+                  Future.microtask(() {
+                    if (context.mounted) {
+                      Navigator.of(context).pop('cancelled');
+                      onServiceDisabled?.call();
+                    }
+                  });
                   return const SizedBox.shrink();
                 }
-
-                // User cancelled the native dialog
                 Future.microtask(() {
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                    widget.onServiceDisabled?.call();
+                  if (context.mounted) {
+                    Navigator.of(context).pop('success');
                   }
                 });
                 return const SizedBox.shrink();
               },
-              error: (error, stackTrace) {
-                return ElevatedButton(
-                  onPressed: () => ref.refresh(requestLocationServiceProvider),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Tentar Novamente'),
-                );
-              },
+              error: (error, stackTrace) => ElevatedButton(
+                onPressed: () => ref.refresh(requestLocationServiceProvider),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Tentar Novamente'),
+              ),
             );
           },
         ),
@@ -176,34 +132,5 @@ class _LocationServiceDialogState extends ConsumerState<LocationServiceDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       backgroundColor: Colors.white,
     );
-  }
-
-  /// Start polling location service status
-  ///
-  /// Polls every 2 seconds to detect when user enables location service
-  /// Automatically closes dialog when service is enabled
-  void _startServicePolling(WidgetRef ref) {
-    ref.listen(locationServiceStatusPollingProvider, (previous, next) {
-      next.when(
-        data: (status) {
-          if (status.isEnabled && mounted) {
-            _isWaitingForService = false;
-            Navigator.of(context).pop();
-            widget.onServiceEnabled?.call();
-          }
-        },
-        error: (error, stackTrace) {
-          // Polling stream ended without service being enabled
-          if (mounted) {
-            _isWaitingForService = false;
-            Navigator.of(context).pop();
-            widget.onServiceDisabled?.call();
-          }
-        },
-        loading: () {
-          // Polling in progress
-        },
-      );
-    });
   }
 }
