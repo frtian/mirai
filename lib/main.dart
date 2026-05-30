@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'config/router.dart';
 import 'core/camera/camera_service.dart';
 import 'core/camera/flutter_camera_service.dart';
 import 'core/connectivity/flutter_connectivity_service.dart';
@@ -41,27 +43,24 @@ Future<void> main() async {
     ),
   );
 
-  runApp(
-    MiraiApp(
-      cameraService: cameraService,
-      captureEvidenceUseCase: captureEvidenceUseCase,
-    ),
+  final cameraPage = CaptureEvidencePage(
+    cameraService: cameraService,
+    captureEvidenceUseCase: captureEvidenceUseCase,
   );
+
+  runApp(ProviderScope(child: MiraiApp(cameraPage: cameraPage)));
 }
 
 class MiraiApp extends StatelessWidget {
-  const MiraiApp({
-    super.key,
-    required this.cameraService,
-    required this.captureEvidenceUseCase,
-  });
+  const MiraiApp({super.key, required this.cameraPage});
 
-  final CameraService cameraService;
-  final CaptureEvidenceUseCase captureEvidenceUseCase;
+  final Widget cameraPage;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    final router = createAppRouter(cameraPage: cameraPage);
+
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Mirai',
       theme: ThemeData(
@@ -73,6 +72,7 @@ class MiraiApp extends StatelessWidget {
           return;
         },
       ),
+      routerConfig: router,
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/camera/camera_service.dart';
 import '../../domain/entities/evidence.dart';
 import '../../domain/usecases/capture_evidence_usecase.dart';
+import 'evidence_test_page.dart';
 
 class CaptureEvidencePage extends StatefulWidget {
   const CaptureEvidencePage({
@@ -22,7 +23,6 @@ class CaptureEvidencePage extends StatefulWidget {
 class _CaptureEvidencePageState extends State<CaptureEvidencePage> {
   bool _isLoading = true;
   bool _isCapturing = false;
-  Evidence? _lastEvidence;
   String? _errorMessage;
 
   @override
@@ -61,9 +61,9 @@ class _CaptureEvidencePageState extends State<CaptureEvidencePage> {
         return;
       }
 
-      setState(() {
-        _lastEvidence = evidence;
-      });
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => EvidenceTestPage(evidence: evidence)),
+      );
     } catch (error) {
       if (mounted) {
         setState(() {
@@ -98,22 +98,8 @@ class _CaptureEvidencePageState extends State<CaptureEvidencePage> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : controller == null || !controller.value.isInitialized
-                      ? Center(child: Text(_errorMessage ?? 'Câmera indisponível.'))
-                      : Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            CameraPreview(controller),
-                            Positioned(
-                              left: 16,
-                              right: 16,
-                              bottom: 16,
-                              child: _StatusCard(
-                                evidence: _lastEvidence,
-                                errorMessage: _errorMessage,
-                              ),
-                            ),
-                          ],
-                        ),
+                  ? Center(child: Text(_errorMessage ?? 'Câmera indisponível.'))
+                  : CameraPreview(controller),
             ),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -128,44 +114,14 @@ class _CaptureEvidencePageState extends State<CaptureEvidencePage> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.camera_alt),
-                  label: Text(_isCapturing ? 'Capturando...' : 'Capturar evidência'),
+                  label: Text(
+                    _isCapturing ? 'Capturando...' : 'Capturar evidência',
+                  ),
                 ),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _StatusCard extends StatelessWidget {
-  const _StatusCard({
-    required this.evidence,
-    required this.errorMessage,
-  });
-
-  final Evidence? evidence;
-  final String? errorMessage;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final text = errorMessage != null
-        ? errorMessage!
-        : evidence == null
-            ? 'Pronto para capturar uma evidência.'
-            : 'Evidência ${evidence!.id} • ${evidence!.status.name}';
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(text),
       ),
     );
   }
