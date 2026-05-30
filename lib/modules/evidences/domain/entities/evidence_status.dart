@@ -3,4 +3,7 @@ enum EvidenceStatus {
   uploading,
   synced,
   failed,
+  approved,
+  pendency,
+  rejected,
 }
