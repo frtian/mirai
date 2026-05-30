@@ -62,9 +62,7 @@ class _CaptureEvidencePageState extends State<CaptureEvidencePage> {
       }
 
       await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => EvidenceTestPage(evidence: evidence),
-        ),
+        MaterialPageRoute(builder: (_) => EvidenceTestPage(evidence: evidence)),
       );
     } catch (error) {
       if (mounted) {
@@ -100,8 +98,8 @@ class _CaptureEvidencePageState extends State<CaptureEvidencePage> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : controller == null || !controller.value.isInitialized
-                      ? Center(child: Text(_errorMessage ?? 'Câmera indisponível.'))
-                      : CameraPreview(controller),
+                  ? Center(child: Text(_errorMessage ?? 'Câmera indisponível.'))
+                  : CameraPreview(controller),
             ),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -116,7 +114,9 @@ class _CaptureEvidencePageState extends State<CaptureEvidencePage> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.camera_alt),
-                  label: Text(_isCapturing ? 'Capturando...' : 'Capturar evidência'),
+                  label: Text(
+                    _isCapturing ? 'Capturando...' : 'Capturar evidência',
+                  ),
                 ),
               ),
             ),
