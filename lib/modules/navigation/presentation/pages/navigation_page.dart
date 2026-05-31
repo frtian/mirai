@@ -29,6 +29,7 @@ class NavigationPage extends ConsumerStatefulWidget {
 }
 
 class _NavigationPageState extends ConsumerState<NavigationPage> {
+  final NavigationCompassController _compassController = NavigationCompassController();
   ({double bearing, double distance})? _lastCalculation;
   NavigationInstructionEntity? _lastInstruction;
   NavigationTargetEntity? _lastTarget;
@@ -46,6 +47,9 @@ class _NavigationPageState extends ConsumerState<NavigationPage> {
           setState(() {
             _lastCalculation = value;
           });
+          // Update the Flame game directly for smooth, immediate rotation without
+          // rebuilding the entire widget tree.
+          _compassController.setBearing(value.bearing);
         }
       });
 
@@ -187,7 +191,7 @@ class _CompassCard extends StatelessWidget {
             child: SizedBox(
               height: 180,
               width: 180,
-              child: NavigationCompass(bearing: bearing),
+              child: NavigationCompass(bearing: bearing, controller: _compassController),
             ),
           ),
           const SizedBox(height: 14),

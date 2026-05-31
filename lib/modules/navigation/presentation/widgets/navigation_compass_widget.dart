@@ -5,10 +5,36 @@ import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+class NavigationCompassController {
+  NavigationCompassGame? _game;
+  double? _pendingBearing;
+
+  void _attach(NavigationCompassGame game) {
+    _game = game;
+    if (_pendingBearing != null) {
+      _game!.updateBearing(_pendingBearing!);
+      _pendingBearing = null;
+    }
+  }
+
+  void _detach() {
+    _game = null;
+  }
+
+  void setBearing(double bearing) {
+    if (_game != null) {
+      _game!.updateBearing(bearing);
+    } else {
+      _pendingBearing = bearing;
+    }
+  }
+}
+
 class NavigationCompass extends StatefulWidget {
   final double bearing;
+  final NavigationCompassController? controller;
 
-  const NavigationCompass({super.key, required this.bearing});
+  const NavigationCompass({super.key, required this.bearing, this.controller});
 
   @override
   State<NavigationCompass> createState() => _NavigationCompassState();
@@ -16,19 +42,32 @@ class NavigationCompass extends StatefulWidget {
 
 class _NavigationCompassState extends State<NavigationCompass> {
   late final NavigationCompassGame _game;
+  bool _ownsGame = false;
 
   @override
   void initState() {
     super.initState();
     _game = NavigationCompassGame(initialBearing: widget.bearing);
+    _ownsGame = true;
+    widget.controller?._attach(_game);
   }
 
   @override
   void didUpdateWidget(covariant NavigationCompass oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._detach();
+      widget.controller?._attach(_game);
+    }
     if (oldWidget.bearing != widget.bearing) {
       _game.updateBearing(widget.bearing);
     }
+  }
+
+  @override
+  void dispose() {
+    widget.controller?._detach();
+    super.dispose();
   }
 
   @override
@@ -88,10 +127,8 @@ class CompassArrowComponent extends PositionComponent {
     ..strokeWidth = 2
     ..color = const Color(0xFFE6ECF4);
 
-  double _bearingRadians = 0;
-
   void setBearingRadians(double radians) {
-    _bearingRadians = radians;
+    angle = radians;
   }
 
   @override
@@ -120,7 +157,6 @@ class CompassArrowComponent extends PositionComponent {
 
     canvas.save();
     canvas.translate(center.x, center.y);
-    canvas.rotate(_bearingRadians);
 
     final arrowLength = coreRadius * 0.75;
     final arrowWidth = coreRadius * 0.45;
