@@ -2,6 +2,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/camera/camera_service.dart';
+import '../../../../design_system/app_colors.dart';
 import '../../domain/entities/evidence.dart';
 import '../../domain/usecases/capture_evidence_usecase.dart';
 import 'capture_success_page.dart';
@@ -58,11 +59,14 @@ class _CaptureEvidencePageState extends State<CaptureEvidencePage> {
       );
 
       if (!mounted) {
+        print('Evidence captured123: $evidence');
         return;
       }
-
+      print('Evidence captured456: $evidence');
       await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => CaptureSuccessPage(evidence: evidence)),
+        MaterialPageRoute(
+          builder: (_) => CaptureSuccessPage(evidence: evidence),
+        ),
       );
     } catch (error) {
       if (mounted) {
@@ -102,20 +106,37 @@ class _CaptureEvidencePageState extends State<CaptureEvidencePage> {
                   : CameraPreview(controller),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24),
               child: SizedBox(
                 width: double.infinity,
-                child: FilledButton.icon(
+                child: ElevatedButton.icon(
                   onPressed: _isCapturing ? null : _captureEvidence,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
                   icon: _isCapturing
                       ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.onPrimary,
+                          ),
                         )
                       : const Icon(Icons.camera_alt),
                   label: Text(
-                    _isCapturing ? 'Capturando...' : 'Capturar evidência',
+                    _isCapturing ? 'CAPTURANDO...' : 'CAPTURAR EVIDÊNCIA',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                 ),
               ),

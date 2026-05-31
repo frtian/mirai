@@ -61,21 +61,34 @@ class CaptureEvidenceUseCase {
       status: EvidenceStatus.pending,
       createdAt: now,
     );
-
+    print('Evidence created: $evidence');
     await _evidenceRepository.saveLocalEvidence(evidence);
 
     final hasConnection = await _connectivityService.hasConnection();
+    print('Has connection: $hasConnection');
     if (!hasConnection) {
       return evidence;
     }
 
-    await _evidenceRepository.updateStatus(evidence.id, EvidenceStatus.uploading);
+    await _evidenceRepository.updateStatus(
+      evidence.id,
+      EvidenceStatus.uploading,
+    );
 
     try {
+      print('Uploading evidence: $evidence');
       return await _evidenceRepository.uploadEvidence(evidence);
-    } catch (_) {
-      await _evidenceRepository.updateStatus(evidence.id, EvidenceStatus.failed);
-      rethrow;
+    } catch (e) {
+      print('Upload failed for evidence ${evidence.id}: $e');
+      await _evidenceRepository.updateStatus(
+        evidence.id,
+        EvidenceStatus.failed,
+      );
+      throw Exception(
+        'Falha ao enviar evidência para o servidor. '
+        'A captura foi salva localmente e poderá ser reenviada depois. '
+        'Erro original: $e',
+      );
     }
   }
 }
