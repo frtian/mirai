@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
-
-import '../../../../design_system/app_text_styles.dart';
+import '../../../../design_system/app_colors.dart';
 
 class AuthPageHeaderWidget extends StatelessWidget {
   const AuthPageHeaderWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       children: [
-        Text('ARARA', style: AppTextStyles.brand),
-        SizedBox(height: 22),
-        Text('Monitoramento Ambiental', textAlign: TextAlign.center, style: AppTextStyles.pageTitle),
-        SizedBox(height: 8),
+        Image.asset(
+          'assets/images/logo.png',
+          height: 100, // Reduzi um pouco a altura da logo também
+          errorBuilder: (context, error, stackTrace) => const Icon(
+            Icons.eco,
+            size: 80,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: 20),
         Text(
-          'Acesse sua conta para monitorar suas\npropriedades.',
+          'Acompanhamento Remoto de Áreas de Recuperação Ambiental',
           textAlign: TextAlign.center,
-          style: AppTextStyles.pageDescription,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
         ),
       ],
     );

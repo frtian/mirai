@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
+import 'package:pinput/pinput.dart';
 import '../../../../design_system/app_colors.dart';
-import '../../../../design_system/app_text_styles.dart';
 import '../controller/auth_page_contrller.dart';
 
 class AuthPageCodeFieldWidget extends StatelessWidget {
@@ -16,51 +15,65 @@ class AuthPageCodeFieldWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: controller.formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text('Código de acesso', style: AppTextStyles.sectionLabel),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: controller.codeController,
-            keyboardType: TextInputType.text,
-            textInputAction: TextInputAction.done,
-            onFieldSubmitted: (_) => onSubmitted(),
-            validator: controller.validateCode,
-            style: AppTextStyles.inputHint,
-            decoration: const InputDecoration(
-              hintText: 'Digite o código recebido',
-              hintStyle: AppTextStyles.inputHint,
-              filled: true,
-              fillColor: AppColors.inputFill,
-              prefixIcon: Icon(Icons.lock_outline, color: AppColors.inputIcon),
-              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(2)),
-                borderSide: BorderSide(color: AppColors.inputBorder),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(2)),
-                borderSide: BorderSide(color: AppColors.inputBorder),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(2)),
-                borderSide: BorderSide(color: AppColors.primary, width: 1.4),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(2)),
-                borderSide: BorderSide(color: Colors.redAccent),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(2)),
-                borderSide: BorderSide(color: Colors.redAccent, width: 1.4),
-              ),
-            ),
-          ),
-        ],
+    final defaultPinTheme = PinTheme(
+      width: 45,
+      height: 50,
+      textStyle: const TextStyle(
+        fontSize: 20,
+        color: AppColors.onSurface,
+        fontWeight: FontWeight.bold,
       ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+    );
+
+    final focusedPinTheme = defaultPinTheme.copyWith(
+      decoration: defaultPinTheme.decoration!.copyWith(
+        border: Border.all(color: AppColors.primary, width: 2),
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Text(
+          'Código de Acesso (OTP)',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppColors.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Pinput(
+          length: 6,
+          controller: controller.codeController,
+          defaultPinTheme: defaultPinTheme,
+          focusedPinTheme: focusedPinTheme,
+          separatorBuilder: (index) => const SizedBox(width: 8),
+          hapticFeedbackType: HapticFeedbackType.lightImpact,
+          onCompleted: (pin) {
+            controller.codeController.text = pin;
+            onSubmitted();
+          },
+          onChanged: (pin) {
+            controller.codeController.text = pin;
+          },
+          cursor: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(bottom: 9),
+                width: 22,
+                height: 1,
+                color: AppColors.primary,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

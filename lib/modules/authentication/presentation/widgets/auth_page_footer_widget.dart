@@ -1,38 +1,69 @@
 import 'package:flutter/material.dart';
-
 import '../../../../design_system/app_colors.dart';
-import '../../../../design_system/app_text_styles.dart';
 
 class AuthPageFooterWidget extends StatelessWidget {
   const AuthPageFooterWidget({super.key});
 
+  void _showSupportDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Suporte e Cadastro'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Para realizar seu cadastro ou obter ajuda com o acesso, entre em contato com a SEMARH:',
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'CAR: (63) 99936-0079',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const Text(
+              'E-mail: car@semarh.to.gov.br',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'O código de acesso (OTP) é enviado para o seu dispositivo após a validação dos seus dados junto à secretaria.',
+              style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('FECHAR'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       children: [
-        Divider(color: AppColors.divider, thickness: 1),
-        SizedBox(height: 18),
-        Text(
-          'Dados protegidos por criptografia de nível militar em\nconformidade com as normas ambientais vigentes.',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.body,
+        TextButton(
+          onPressed: () => _showSupportDialog(context),
+          child: const Text(
+            'Precisa de ajuda ou não tem cadastro?',
+            style: TextStyle(
+              color: AppColors.primary,
+              decoration: TextDecoration.underline,
+            ),
+          ),
         ),
-        SizedBox(height: 24),
-        Divider(color: AppColors.divider, thickness: 1),
-        SizedBox(height: 18),
-        Text('ARARA', style: AppTextStyles.footerBrand),
-        SizedBox(height: 12),
-        Text('© 2026 SEMARH ARARA. All rights reserved.', textAlign: TextAlign.center, style: AppTextStyles.footerText),
-        SizedBox(height: 14),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 18,
-          runSpacing: 8,
-          children: [
-            Text('Support', style: AppTextStyles.footerLink),
-            Text('Privacy Policy', style: AppTextStyles.footerLink),
-            Text('Terms of Service', style: AppTextStyles.footerLink),
-          ],
+        const SizedBox(height: 32),
+        const Text(
+          'Arara 2026₢',
+          style: TextStyle(
+            color: AppColors.onSurfaceVariant,
+            fontSize: 12,
+            letterSpacing: 1.1,
+          ),
         ),
       ],
     );
