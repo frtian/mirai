@@ -6,7 +6,8 @@ import '../app_text_styles.dart';
 class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
   const AppBarWidget.brand({
     super.key,
-    required this.brandLabel,
+    this.brandLabel,
+    this.brandLogoPath,
     this.onLeadingPressed,
     this.leadingIcon = Icons.menu,
     this.trailing,
@@ -15,9 +16,9 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
     this.brandStyle = AppTextStyles.brand,
     this.leadingWidth = 152,
     this.toolbarHeight = kToolbarHeight,
-  })  : title = null,
-        titleStyle = null,
-        centerTitle = false;
+  }) : title = null,
+       titleStyle = null,
+       centerTitle = false;
 
   const AppBarWidget.page({
     super.key,
@@ -31,10 +32,12 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
     this.leadingWidth = 56,
     this.toolbarHeight = kToolbarHeight,
     this.centerTitle = true,
-  })  : brandLabel = null,
-        brandStyle = null;
+  }) : brandLabel = null,
+       brandStyle = null,
+       brandLogoPath = null;
 
   final String? brandLabel;
+  final String? brandLogoPath;
   final String? title;
   final VoidCallback? onLeadingPressed;
   final IconData leadingIcon;
@@ -52,7 +55,7 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brandMode = brandLabel != null;
+    final brandMode = brandLabel != null || brandLogoPath != null;
 
     return AppBar(
       automaticallyImplyLeading: false,
@@ -66,7 +69,9 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
       titleSpacing: 0,
       centerTitle: centerTitle,
       leadingWidth: leadingWidth,
-      leading: brandMode ? _buildBrandLeading(context) : _buildIconLeading(context),
+      leading: brandMode
+          ? _buildBrandLeading(context)
+          : _buildIconLeading(context),
       title: title == null
           ? null
           : Text(
@@ -111,7 +116,15 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
             children: [
               Icon(leadingIcon, color: leadingIconColor, size: 26),
               const SizedBox(width: 10),
-              Text(brandLabel!, style: brandStyle),
+              if (brandLogoPath != null)
+                Image.asset(
+                  brandLogoPath!,
+                  height: 52,
+                  errorBuilder: (context, _, __) =>
+                      Text(brandLabel ?? '', style: brandStyle),
+                )
+              else if (brandLabel != null)
+                Text(brandLabel!, style: brandStyle),
             ],
           ),
         ),
