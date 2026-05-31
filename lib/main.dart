@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'config/router.dart';
-import 'core/camera/camera_service.dart';
 import 'core/camera/flutter_camera_service.dart';
 import 'core/connectivity/flutter_connectivity_service.dart';
 import 'core/device/flutter_device_info_service.dart';
@@ -19,46 +18,26 @@ import 'modules/evidences/presentation/pages/capture_evidence_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Inicializar apenas o essencial: database (rápido)
   final evidenceDatabase = EvidenceDatabase();
-  final cameraService = FlutterCameraService();
-  final locationService = FlutterLocationService();
-  final deviceInfoService = FlutterDeviceInfoService();
-  final connectivityService = FlutterConnectivityService();
-  final evidenceStorageService = FlutterEvidenceStorageService();
-  final evidenceLocalDataSource = EvidenceLocalDataSourceImpl(evidenceDatabase);
-  final evidenceUploadService = DioEvidenceUploadService(
-    dio: Dio(),
-    uploadPath: '/evidences',
-  );
 
-  final captureEvidenceUseCase = CaptureEvidenceUseCase(
-    cameraService: cameraService,
-    locationService: locationService,
-    deviceInfoService: deviceInfoService,
-    connectivityService: connectivityService,
-    evidenceStorageService: evidenceStorageService,
-    evidenceRepository: EvidenceRepositoryImpl(
-      localDataSource: evidenceLocalDataSource,
-      uploadService: evidenceUploadService,
-    ),
-  );
+  // Camera service será lazy-loaded quando necessário
+  // Todos os outros services serão criados sob demanda
 
-  final cameraPage = CaptureEvidencePage(
-    cameraService: cameraService,
-    captureEvidenceUseCase: captureEvidenceUseCase,
-  );
-
-  runApp(ProviderScope(child: MiraiApp(cameraPage: cameraPage)));
+  runApp(ProviderScope(child: MiraiApp(evidenceDatabase: evidenceDatabase)));
 }
 
 class MiraiApp extends StatelessWidget {
-  const MiraiApp({super.key, required this.cameraPage});
+  const MiraiApp({super.key, required this.evidenceDatabase});
 
-  final Widget cameraPage;
+  final EvidenceDatabase evidenceDatabase;
 
   @override
   Widget build(BuildContext context) {
-    final router = createAppRouter(cameraPage: cameraPage);
+    final router = createAppRouter(
+      cameraPageBuilder: _buildCameraPage,
+      onCodeSubmitted: _onCodeSubmitted,
+    );
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
@@ -68,6 +47,44 @@ class MiraiApp extends StatelessWidget {
         useMaterial3: true,
       ),
       routerConfig: router,
+    );
+  }
+
+  Future<void> _onCodeSubmitted(String code) async {
+    return;
+  }
+
+  /// Build camera page on-demand (lazy loading)
+  Widget _buildCameraPage() {
+    // Inicializar services apenas quando a página de câmera é acessada
+    final cameraService = FlutterCameraService();
+    final locationService = FlutterLocationService();
+    final deviceInfoService = FlutterDeviceInfoService();
+    final connectivityService = FlutterConnectivityService();
+    final evidenceStorageService = FlutterEvidenceStorageService();
+    final evidenceLocalDataSource = EvidenceLocalDataSourceImpl(
+      evidenceDatabase,
+    );
+    final evidenceUploadService = DioEvidenceUploadService(
+      dio: Dio(),
+      uploadPath: '/evidences',
+    );
+
+    final captureEvidenceUseCase = CaptureEvidenceUseCase(
+      cameraService: cameraService,
+      locationService: locationService,
+      deviceInfoService: deviceInfoService,
+      connectivityService: connectivityService,
+      evidenceStorageService: evidenceStorageService,
+      evidenceRepository: EvidenceRepositoryImpl(
+        localDataSource: evidenceLocalDataSource,
+        uploadService: evidenceUploadService,
+      ),
+    );
+
+    return CaptureEvidencePage(
+      cameraService: cameraService,
+      captureEvidenceUseCase: captureEvidenceUseCase,
     );
   }
 }

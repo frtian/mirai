@@ -25,6 +25,13 @@ class LocationPermissionDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    void safePop() {
+      final navigator = Navigator.of(context, rootNavigator: true);
+      if (navigator.canPop()) {
+        navigator.pop();
+      }
+    }
+
     return AlertDialog(
       title: const Text(
         'Localização Necessária',
@@ -67,7 +74,7 @@ class LocationPermissionDialog extends ConsumerWidget {
       actions: [
         TextButton(
           onPressed: () {
-            Navigator.of(context).pop();
+            safePop();
             onPermissionDenied?.call();
           },
           child: const Text('Cancelar'),
@@ -89,7 +96,7 @@ class LocationPermissionDialog extends ConsumerWidget {
               data: (_) {
                 // If we get here, permission was granted
                 Future.microtask(() {
-                  Navigator.of(context).pop();
+                  safePop();
                   onPermissionGranted?.call();
                 });
                 return const SizedBox.shrink();
@@ -98,7 +105,7 @@ class LocationPermissionDialog extends ConsumerWidget {
                 // Handle error on next frame to avoid build context issues
                 Future.microtask(() {
                   if (error.toString().contains('permanently denied')) {
-                    Navigator.of(context).pop();
+                    safePop();
                     onPermissionDeniedForever?.call();
                   } else {
                     // Show error and allow retry
