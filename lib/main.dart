@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'config/router.dart';
-import 'core/camera/camera_service.dart';
 import 'core/camera/flutter_camera_service.dart';
 import 'core/connectivity/flutter_connectivity_service.dart';
 import 'core/device/flutter_device_info_service.dart';
@@ -35,7 +34,10 @@ class MiraiApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final router = createAppRouter(cameraPageBuilder: _buildCameraPage);
+    final router = createAppRouter(
+      cameraPageBuilder: _buildCameraPage,
+      onCodeSubmitted: _onCodeSubmitted,
+    );
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
@@ -46,6 +48,10 @@ class MiraiApp extends StatelessWidget {
       ),
       routerConfig: router,
     );
+  }
+
+  Future<void> _onCodeSubmitted(String code) async {
+    return;
   }
 
   /// Build camera page on-demand (lazy loading)
