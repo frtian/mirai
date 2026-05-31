@@ -4,7 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:mirai/modules/navigation/domain/entities/location_entity.dart';
 import 'package:mirai/modules/navigation/domain/entities/navigation_instruction_entity.dart';
 import 'package:mirai/modules/navigation/domain/entities/navigation_target_entity.dart';
+import 'package:mirai/modules/navigation/domain/entities/location_permission_entity.dart';
+import 'package:mirai/modules/navigation/domain/entities/location_service_status_entity.dart';
 import 'package:mirai/modules/navigation/presentation/widgets/navigation_compass_widget.dart';
+import 'package:mirai/modules/navigation/presentation/widgets/location_permission_dialog.dart';
+import 'package:mirai/modules/navigation/presentation/widgets/location_service_dialog.dart';
+import '../controllers/location_permission_provider.dart';
 import '../controllers/geolocation_provider.dart';
 import '../controllers/navigation_calculation_provider.dart';
 import '../controllers/navigation_instruction_provider.dart';
@@ -35,6 +40,89 @@ class _NavigationPageState extends ConsumerState<NavigationPage> {
   NavigationTargetEntity? _lastTarget;
   LocationEntity? _lastLocation;
   bool _listenersInitialized = false;
+  bool _permissionDialogShown = false;
+  bool _serviceDialogShown = false;
+  bool _ensuringLocation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureLocationAccess());
+  }
+
+  Future<void> _ensureLocationAccess() async {
+    if (_ensuringLocation) return;
+    _ensuringLocation = true;
+
+    try {
+      LocationPermissionEntity? permission;
+      try {
+        permission = await ref.read(locationPermissionProvider.future);
+      } catch (_) {
+        permission = null;
+      }
+
+      LocationServiceStatusEntity? serviceStatus;
+      try {
+        serviceStatus = await ref.read(locationServiceStatusProvider.future);
+      } catch (_) {
+        serviceStatus = null;
+      }
+
+      final hasPermission = permission?.isGranted ?? false;
+      final serviceEnabled = serviceStatus?.isEnabled ?? false;
+
+      if (!hasPermission && !_permissionDialogShown) {
+        _permissionDialogShown = true;
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => LocationPermissionDialog(
+            onPermissionGranted: () async {
+              // Re-initialize location providers
+              ref.invalidate(geolocationStreamProvider);
+              ref.invalidate(navigationCalculationProvider);
+              if (mounted) setState(() {});
+            },
+            onPermissionDenied: () {
+              // Retry check
+              _permissionDialogShown = false;
+              _ensureLocationAccess();
+            },
+            onPermissionDeniedForever: () {
+              // Let the user know and do not keep retrying
+              _permissionDialogShown = false;
+            },
+          ),
+        );
+      }
+
+      if (hasPermission && !serviceEnabled && !_serviceDialogShown) {
+        _serviceDialogShown = true;
+        if (!mounted) return;
+        final result = await showDialog<String>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => LocationServiceDialog(
+            onServiceDisabled: () {},
+          ),
+        );
+
+        // If service enabled, restart providers
+        if (result == 'success') {
+          ref.invalidate(geolocationStreamProvider);
+          ref.invalidate(navigationCalculationProvider);
+          if (mounted) setState(() {});
+        }
+        _serviceDialogShown = false;
+      }
+    } catch (e) {
+      // ignore errors — providers will surface errors in UI if needed
+    } finally {
+      _ensuringLocation = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
