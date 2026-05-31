@@ -51,7 +51,15 @@ class MiraiApp extends StatelessWidget {
   }
 
   Future<void> _onCodeSubmitted(String code) async {
-    return;
+    // Simula uma pequena demora de rede para o feedback visual de loading
+    await Future.delayed(const Duration(seconds: 1));
+    
+    // Validação simples: aceita qualquer código de 6 dígitos para o protótipo
+    if (code.length != 6) {
+      throw Exception('Código inválido. Deve ter 6 dígitos.');
+    }
+    
+    print('Código validado com sucesso: $code');
   }
 
   /// Build camera page on-demand (lazy loading)
