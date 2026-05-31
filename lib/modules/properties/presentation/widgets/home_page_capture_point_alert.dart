@@ -56,7 +56,7 @@ class HomePageCapturePointAlertWidget extends StatelessWidget {
                       'Data da proxima captura',
                       style: AppTextStyles.link.copyWith(
                         color: _alertTitle,
-                        fontSize: 24,
+                        fontSize: 18,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -71,7 +71,11 @@ class HomePageCapturePointAlertWidget extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.arrow_forward_ios_rounded, size: 18, color: _alertTitle),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 18,
+                color: _alertTitle,
+              ),
             ],
           ),
         ),

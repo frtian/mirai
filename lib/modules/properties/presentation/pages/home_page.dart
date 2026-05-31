@@ -49,6 +49,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBarWidget.brand(
+        brandLogoPath: 'assets/images/logo_home.png',
         brandLabel: 'ARARA',
         leadingIcon: Icons.home_outlined,
         trailing: Container(

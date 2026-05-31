@@ -1,6 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
+import 'package:mirai/modules/properties/data/capture_point_api_datasource.dart';
+import 'package:mirai/modules/properties/data/capture_point_repository_impl.dart';
+import 'package:mirai/modules/properties/domain/usecases/get_capture_points_usecase.dart';
+
 class HomePageController extends ChangeNotifier {
   HomePageController({
     required this.ownerIdentifier,
@@ -12,7 +16,8 @@ class HomePageController extends ChangeNotifier {
   final String ownerIdentifier;
   final Dio _dio;
   final bool useMock;
-  final Future<HomePageViewData> Function(String ownerIdentifier, Dio dio)? loader;
+  final Future<HomePageViewData> Function(String ownerIdentifier, Dio dio)?
+  loader;
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -49,7 +54,36 @@ class HomePageController extends ChangeNotifier {
       '/owners/$ownerIdentifier/home',
     );
 
-    return HomePageViewData.fromMap(response.data ?? <String, dynamic>{});
+    final Map<String, dynamic> base = Map<String, dynamic>.from(
+      response.data ?? <String, dynamic>{},
+    );
+
+    // Attempt to sync capture points from backend. Failure should not block dashboard rendering.
+    try {
+      final datasource = CapturePointApiDatasource(dio: _dio);
+      final repository = CapturePointRepositoryImpl(datasource: datasource);
+      final usecase = GetCapturePointsUseCase(repository: repository);
+
+      final capturePoints = await usecase.call(ownerIdentifier);
+
+      final pending = capturePoints.where((c) => c.needsEvidence).toList();
+
+      base['hasPendingCapturePoint'] = pending.isNotEmpty;
+
+      if (pending.isNotEmpty) {
+        final dates = pending.map((p) => p.nextCaptureAt).whereType<DateTime>();
+        if (dates.isNotEmpty) {
+          final earliest = dates.reduce((a, b) => a.isBefore(b) ? a : b);
+          final d = earliest.toLocal();
+          base['nextCaptureDeadline'] =
+              '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} • ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+        }
+      }
+    } catch (_) {
+      // ignore capture point sync errors — dashboard still renders with server-provided data
+    }
+
+    return HomePageViewData.fromMap(base);
   }
 
   HomePageViewData _buildMockDashboard(String ownerCode) {
@@ -57,7 +91,7 @@ class HomePageController extends ChangeNotifier {
 
     return HomePageViewData(
       greeting: 'Bem-vindo de volta',
-      ownerName: 'Proprietario $sanitizedCode',
+      ownerName: 'Sr. José Pires',
       ownerRegion: 'Polo Sul • Monitoramento ambiental ativo',
       highlightLabel: '3 propriedades vinculadas',
       lastSyncLabel: 'Atualizado ha 5 minutos',
@@ -160,10 +194,13 @@ class HomePageViewData {
       greeting: map['greeting'] as String? ?? 'Bem-vindo',
       ownerName: map['ownerName'] as String? ?? 'Proprietario',
       ownerRegion: map['ownerRegion'] as String? ?? 'Sem regiao definida',
-      highlightLabel: map['highlightLabel'] as String? ?? '0 propriedades vinculadas',
-      lastSyncLabel: map['lastSyncLabel'] as String? ?? 'Sem atualizacao registrada',
-        hasPendingCapturePoint: map['hasPendingCapturePoint'] as bool? ?? false,
-        nextCaptureDeadline: map['nextCaptureDeadline'] as String? ?? 'Sem prazo definido',
+      highlightLabel:
+          map['highlightLabel'] as String? ?? '0 propriedades vinculadas',
+      lastSyncLabel:
+          map['lastSyncLabel'] as String? ?? 'Sem atualizacao registrada',
+      hasPendingCapturePoint: map['hasPendingCapturePoint'] as bool? ?? false,
+      nextCaptureDeadline:
+          map['nextCaptureDeadline'] as String? ?? 'Sem prazo definido',
       stats: (map['stats'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(HomePageStat.fromMap)
