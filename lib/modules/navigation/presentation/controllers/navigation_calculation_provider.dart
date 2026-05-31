@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mirai/modules/navigation/data/repositories/navigation_repository_impl.dart';
 import 'geolocation_provider.dart';
 import 'navigation_target_provider.dart';
+import 'sensor_heading_provider.dart';
 
 /// Provides the navigation repository
 final navigationRepositoryProvider = Provider<NavigationRepositoryImpl>((ref) {
@@ -58,11 +59,18 @@ final bearingProvider = FutureProvider.autoDispose<double>((ref) async {
       target.latitude,
       target.longitude,
     );
-    final heading = location.heading;
-    if (heading == null) {
-      return _normalizeBearing(bearingToTarget);
-    }
-    return _normalizeBearing(bearingToTarget - heading);
+
+  // Prefer device sensor heading (magnetometer) when available for smoother
+  // and more responsive compass rotation. Fall back to device location
+  // heading (if provided by GPS) otherwise.
+  final sensorHeading = ref.watch(sensorHeadingProvider).asData?.value;
+  final heading = sensorHeading ?? location.heading;
+
+  if (heading == null) {
+    return _normalizeBearing(bearingToTarget);
+  }
+
+  return _normalizeBearing(bearingToTarget - heading);
   } catch (e) {
     throw NavigationCalculationException(
       message: 'Failed to calculate bearing',
