@@ -33,16 +33,11 @@ class _AuthPageState extends State<AuthPage> {
     }
   }
 
-  Future<void> _handleSubmit() async {
-    final isAuthenticated = await _controller.submit();
-    if (!mounted || !isAuthenticated) {
-      return;
-    }
-
-    final ownerCode = Uri.encodeQueryComponent(
-      _controller.codeController.text.trim(),
-    );
-    context.go('/home?ownerCode=$ownerCode');
+  void _handleSubmit() {
+    // Navegação direta e simples para a home
+    final ownerCode = _controller.codeController.text.trim();
+    final code = ownerCode.isEmpty ? 'demo-user' : ownerCode;
+    context.go('/home?ownerCode=$code');
   }
 
   @override
@@ -75,7 +70,7 @@ class _AuthPageState extends State<AuthPage> {
                       side: const BorderSide(color: AppColors.border),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                      padding: const EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -83,7 +78,7 @@ class _AuthPageState extends State<AuthPage> {
                             controller: _controller,
                             onSubmitted: _handleSubmit,
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 24),
                           AuthPageActionsWidget(
                             controller: _controller,
                             onSubmit: _handleSubmit,
@@ -92,7 +87,7 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 32),
                   const AuthPageFooterWidget(),
                 ],
               ),
