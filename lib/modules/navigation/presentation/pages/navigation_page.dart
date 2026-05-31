@@ -103,6 +103,7 @@ class _NavigationPageState extends ConsumerState<NavigationPage> {
                 calculation: calculationValue,
                 target: targetValue,
                 location: locationValue,
+                controller: _compassController,
               ),
             ),
             const SizedBox(height: 20),
@@ -154,11 +155,13 @@ class _CompassCard extends StatelessWidget {
   final ({double bearing, double distance})? calculation;
   final NavigationTargetEntity? target;
   final LocationEntity? location;
+  final NavigationCompassController? controller;
 
   const _CompassCard({
     required this.calculation,
     required this.target,
     required this.location,
+    this.controller,
   });
 
   @override
@@ -191,7 +194,7 @@ class _CompassCard extends StatelessWidget {
             child: SizedBox(
               height: 180,
               width: 180,
-              child: NavigationCompass(bearing: bearing, controller: _compassController),
+              child: NavigationCompass(bearing: bearing, controller: controller),
             ),
           ),
           const SizedBox(height: 14),
