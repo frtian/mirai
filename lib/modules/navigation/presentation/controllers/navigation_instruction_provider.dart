@@ -31,7 +31,6 @@ final navigationInstructionProvider =
       final distance = calculation.distance;
 
       // Generate instruction text based on bearing and distance
-      final cardinalDirection = _getCardinalDirection(bearing);
       final distanceText = _formatDistance(distance);
 
       // Determine instruction type based on bearing
@@ -39,7 +38,6 @@ final navigationInstructionProvider =
 
       // Generate human-readable instruction
       final instructionText = _generateInstructionText(
-        cardinalDirection,
         distanceText,
         instructionType,
       );
@@ -76,33 +74,6 @@ final navigationInstructionStreamProvider =
         }
       }
     });
-
-/// Converts bearing (degrees) to cardinal direction string
-///
-/// Returns one of: N, NE, E, SE, S, SW, W, NW
-String _getCardinalDirection(double bearing) {
-  // Normalize bearing to 0-360
-  final normalizedBearing = bearing % 360;
-
-  // Map bearing to cardinal directions (each direction covers 45 degrees)
-  if (normalizedBearing >= 337.5 || normalizedBearing < 22.5) {
-    return 'North';
-  } else if (normalizedBearing >= 22.5 && normalizedBearing < 67.5) {
-    return 'Northeast';
-  } else if (normalizedBearing >= 67.5 && normalizedBearing < 112.5) {
-    return 'East';
-  } else if (normalizedBearing >= 112.5 && normalizedBearing < 157.5) {
-    return 'Southeast';
-  } else if (normalizedBearing >= 157.5 && normalizedBearing < 202.5) {
-    return 'South';
-  } else if (normalizedBearing >= 202.5 && normalizedBearing < 247.5) {
-    return 'Southwest';
-  } else if (normalizedBearing >= 247.5 && normalizedBearing < 292.5) {
-    return 'West';
-  } else {
-    return 'Northwest';
-  }
-}
 
 /// Formats distance in a human-readable way
 ///
@@ -147,39 +118,31 @@ InstructionType _getInstructionType(double bearing) {
 
 /// Generates human-readable instruction text
 ///
-/// Combines cardinal direction, distance, and instruction type into
-/// a natural language instruction suitable for voice output or display.
+/// Combines distance and instruction type into
+/// a natural language instruction suitable for display.
 String _generateInstructionText(
-  String direction,
   String distance,
   InstructionType instructionType,
 ) {
-  final instructionVerb = _getInstructionVerb(instructionType);
-
-  return '$instructionVerb towards the $direction. Distance: $distance';
-}
-
-/// Gets the appropriate verb for the instruction type
-String _getInstructionVerb(InstructionType type) {
-  switch (type) {
+  switch (instructionType) {
     case InstructionType.straight:
-      return 'Continue straight';
+      return 'Siga nessa direção por $distance';
     case InstructionType.turnLeft:
-      return 'Turn left';
+      return 'Vire à esquerda e siga por $distance';
     case InstructionType.turnRight:
-      return 'Turn right';
+      return 'Vire à direita e siga por $distance';
     case InstructionType.uTurn:
-      return 'Make a U-turn';
+      return 'Faça o retorno e siga por $distance';
     case InstructionType.exit:
-      return 'Exit';
+      return 'Saia e siga por $distance';
     case InstructionType.enterHighway:
-      return 'Enter highway';
+      return 'Acesse a via e siga por $distance';
     case InstructionType.leaveHighway:
-      return 'Leave highway';
+      return 'Saia da via e siga por $distance';
     case InstructionType.roundabout:
-      return 'Enter roundabout';
+      return 'Entre na rotatória e siga por $distance';
     case InstructionType.arrive:
-      return 'You have arrived at';
+      return 'Você chegou ao ponto de captura';
   }
 }
 

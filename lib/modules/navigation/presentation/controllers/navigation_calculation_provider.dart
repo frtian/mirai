@@ -53,12 +53,16 @@ final bearingProvider = FutureProvider.autoDispose<double>((ref) async {
   );
 
   try {
-    final bearing = await repository.calculateBearing(
+    final bearingToTarget = await repository.calculateBearing(
       location,
       target.latitude,
       target.longitude,
     );
-    return bearing;
+    final heading = location.heading;
+    if (heading == null) {
+      return _normalizeBearing(bearingToTarget);
+    }
+    return _normalizeBearing(bearingToTarget - heading);
   } catch (e) {
     throw NavigationCalculationException(
       message: 'Failed to calculate bearing',
@@ -162,4 +166,9 @@ class NavigationCalculationException implements Exception {
 
   @override
   String toString() => 'NavigationCalculationException: $message';
+}
+
+double _normalizeBearing(double bearing) {
+  final normalized = bearing % 360;
+  return normalized < 0 ? normalized + 360 : normalized;
 }
