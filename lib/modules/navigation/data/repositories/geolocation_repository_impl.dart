@@ -60,6 +60,7 @@ class GeolocationRepositoryImpl implements GeolocationRepository {
       latitude: model.latitude,
       longitude: model.longitude,
       accuracy: model.accuracy,
+      heading: model.heading,
       timestamp: model.timestamp,
     );
   }

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mirai/modules/navigation/domain/entities/location_entity.dart';
-import 'package:mirai/modules/navigation/domain/entities/navigation_target_entity.dart';
 import 'package:mirai/modules/navigation/domain/entities/navigation_instruction_entity.dart';
+import 'package:mirai/modules/navigation/domain/entities/navigation_target_entity.dart';
+import 'package:mirai/modules/navigation/presentation/widgets/navigation_compass_widget.dart';
 import '../controllers/geolocation_provider.dart';
-import '../controllers/navigation_target_provider.dart';
 import '../controllers/navigation_calculation_provider.dart';
 import '../controllers/navigation_instruction_provider.dart';
+import '../controllers/navigation_target_provider.dart';
 
 /// Main navigation page using Riverpod providers
 ///
@@ -20,459 +21,317 @@ import '../controllers/navigation_instruction_provider.dart';
 ///
 /// All data flows through composable Riverpod providers that handle
 /// location streaming, calculations, and instruction generation.
-class NavigationPage extends ConsumerWidget {
+class NavigationPage extends ConsumerStatefulWidget {
   const NavigationPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the location stream
-    final locationAsync = ref.watch(geolocationStreamProvider);
-    // Watch the navigation target
-    final targetAsync = ref.watch(navigationTargetProvider);
-    // Watch the calculation (bearing and distance)
+  ConsumerState<NavigationPage> createState() => _NavigationPageState();
+}
+
+class _NavigationPageState extends ConsumerState<NavigationPage> {
+  ({double bearing, double distance})? _lastCalculation;
+  NavigationInstructionEntity? _lastInstruction;
+  NavigationTargetEntity? _lastTarget;
+  LocationEntity? _lastLocation;
+  bool _listenersInitialized = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_listenersInitialized) {
+      _listenersInitialized = true;
+
+      ref.listen(navigationCalculationProvider, (previous, next) {
+        final value = next.asData?.value;
+        if (value != null && mounted) {
+          setState(() {
+            _lastCalculation = value;
+          });
+        }
+      });
+
+      ref.listen(navigationInstructionStreamProvider, (previous, next) {
+        final value = next.asData?.value;
+        if (value != null && mounted) {
+          setState(() {
+            _lastInstruction = value;
+          });
+        }
+      });
+
+      ref.listen(navigationTargetProvider, (previous, next) {
+        final value = next.asData?.value;
+        if (value != null && mounted) {
+          setState(() {
+            _lastTarget = value;
+          });
+        }
+      });
+
+      ref.listen(geolocationStreamProvider, (previous, next) {
+        final value = next.asData?.value;
+        if (value != null && mounted) {
+          setState(() {
+            _lastLocation = value;
+          });
+        }
+      });
+    }
+
     final calculationAsync = ref.watch(navigationCalculationProvider);
-    // Watch the instruction
-    final instructionAsync = ref.watch(navigationInstructionProvider);
+    final instructionAsync = ref.watch(navigationInstructionStreamProvider);
+    final targetAsync = ref.watch(navigationTargetProvider);
+    final locationAsync = ref.watch(geolocationStreamProvider);
+
+    final calculationValue = calculationAsync.asData?.value ?? _lastCalculation;
+    final instructionValue = instructionAsync.asData?.value ?? _lastInstruction;
+    final targetValue = targetAsync.asData?.value ?? _lastTarget;
+    final locationValue = locationAsync.asData?.value ?? _lastLocation;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Navegação'), centerTitle: true),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Current Location Section
-              _CurrentLocationSection(locationAsync: locationAsync),
-              const SizedBox(height: 24),
-
-              // Target Information Section
-              _TargetInfoSection(targetAsync: targetAsync),
-              const SizedBox(height: 24),
-
-              // Navigation Calculation Section
-              _NavigationCalculationSection(calculationAsync: calculationAsync),
-              const SizedBox(height: 24),
-
-              // Voice Instruction Section
-              _VoiceInstructionSection(instructionAsync: instructionAsync),
-              const SizedBox(height: 32),
-
-              // Action Button
-              ElevatedButton(
-                onPressed: () => context.pushNamed('camera'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 12,
-                  ),
-                ),
-                child: const Text('Capturar Evidência'),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _CompassCard(
+                calculation: calculationValue,
+                target: targetValue,
+                location: locationValue,
               ),
-            ],
+            ),
+            const SizedBox(height: 20),
+            _InstructionPanel(instruction: instructionValue),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.pushNamed('camera'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F766E),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 12,
+                ),
+              ),
+              child: const Text('Capturar Evidência'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InstructionPanel extends StatelessWidget {
+  final NavigationInstructionEntity? instruction;
+
+  const _InstructionPanel({required this.instruction});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        instruction?.text ?? 'Aguardando direção...',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _CompassCard extends StatelessWidget {
+  final ({double bearing, double distance})? calculation;
+  final NavigationTargetEntity? target;
+  final LocationEntity? location;
+
+  const _CompassCard({
+    required this.calculation,
+    required this.target,
+    required this.location,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final distanceLabel = calculation == null
+        ? '--|metros'
+        : _distanceLabel(calculation!.distance);
+    final bearing = calculation?.bearing ?? 0;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
-        ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _DistanceHeader(distanceLabel: distanceLabel),
+          const SizedBox(height: 14),
+          Center(
+            child: SizedBox(
+              height: 180,
+              width: 180,
+              child: NavigationCompass(bearing: bearing),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _TargetName(target: target),
+          const SizedBox(height: 8),
+          _AccuracyChip(location: location),
+        ],
       ),
     );
   }
 }
 
-/// Widget that displays current location information
-class _CurrentLocationSection extends StatelessWidget {
-  final AsyncValue<LocationEntity> locationAsync;
+class _DistanceHeader extends StatelessWidget {
+  final String distanceLabel;
 
-  const _CurrentLocationSection({required this.locationAsync});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Localização Atual',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            locationAsync.when(
-              data: (location) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _InfoRow(
-                    label: 'Latitude',
-                    value: location.latitude.toStringAsFixed(6),
-                  ),
-                  const SizedBox(height: 8),
-                  _InfoRow(
-                    label: 'Longitude',
-                    value: location.longitude.toStringAsFixed(6),
-                  ),
-                  const SizedBox(height: 8),
-                  _InfoRow(
-                    label: 'Precisão',
-                    value: '${(location.accuracy ?? 0).toStringAsFixed(1)} m',
-                  ),
-                  const SizedBox(height: 8),
-                  _InfoRow(
-                    label: 'Timestamp',
-                    value: location.timestamp.toString().split('.')[0],
-                  ),
-                ],
-              ),
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (error, stack) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
-                        size: 32,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Erro ao obter localização',
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        error.toString(),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Widget that displays target information
-class _TargetInfoSection extends StatelessWidget {
-  final AsyncValue<NavigationTargetEntity> targetAsync;
-
-  const _TargetInfoSection({required this.targetAsync});
+  const _DistanceHeader({required this.distanceLabel});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Alvo de Navegação',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            targetAsync.when(
-              data: (target) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _InfoRow(label: 'Nome', value: target.name),
-                  const SizedBox(height: 8),
-                  Text(
-                    target.description,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _InfoRow(
-                    label: 'Latitude',
-                    value: target.latitude.toStringAsFixed(6),
-                  ),
-                  const SizedBox(height: 8),
-                  _InfoRow(
-                    label: 'Longitude',
-                    value: target.longitude.toStringAsFixed(6),
-                  ),
-                ],
-              ),
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (error, stack) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
-                        size: 32,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Erro ao carregar alvo',
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+    final parts = distanceLabel.split('|');
+    final value = parts.first;
+    final unit = parts.last;
 
-/// Widget that displays navigation calculations (bearing and distance)
-class _NavigationCalculationSection extends StatelessWidget {
-  final AsyncValue<({double bearing, double distance})> calculationAsync;
-
-  const _NavigationCalculationSection({required this.calculationAsync});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      color: Colors.teal[50],
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Cálculos de Navegação',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            calculationAsync.when(
-              data: (calculation) => Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Bearing',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${calculation.bearing.toStringAsFixed(1)}°',
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.teal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Distância',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          calculation.distance < 1000
-                              ? '${calculation.distance.toStringAsFixed(0)} m'
-                              : '${(calculation.distance / 1000).toStringAsFixed(2)} km',
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.teal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (error, stack) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
-                        size: 32,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Erro ao calcular',
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Widget that displays voice instruction
-class _VoiceInstructionSection extends StatelessWidget {
-  final AsyncValue<NavigationInstructionEntity> instructionAsync;
-
-  const _VoiceInstructionSection({required this.instructionAsync});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      color: Colors.amber[50],
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Instrução de Navegação',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            instructionAsync.when(
-              data: (instruction) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12.0),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber[200]!, width: 1),
-                    ),
-                    child: Text(
-                      instruction.text,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _InfoRow(
-                    label: 'Tipo',
-                    value: instruction.instructionType.name,
-                  ),
-                ],
-              ),
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (error, stack) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
-                        size: 32,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Erro ao gerar instrução',
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Helper widget to display key-value information
-class _InfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _InfoRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
       children: [
         Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-            fontWeight: FontWeight.w500,
+          value,
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+            fontWeight: FontWeight.w700,
           ),
         ),
         Text(
-          value,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          unit,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _TargetName extends StatelessWidget {
+  final NavigationTargetEntity? target;
+
+  const _TargetName({required this.target});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = target?.name ?? 'Carregando ponto...';
+    return Text(
+      label,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+      ),
+      textAlign: TextAlign.center,
+    );
+  }
+}
+
+class _AccuracyChip extends StatelessWidget {
+  final LocationEntity? location;
+
+  const _AccuracyChip({required this.location});
+
+  @override
+  Widget build(BuildContext context) {
+    final accuracy = location?.accuracy;
+    final label = accuracy == null
+        ? 'Precisão GPS: --'
+        : 'Precisão GPS: ${accuracy.toStringAsFixed(0)} m';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7FB),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: Color(0xFFB8860B),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _distanceLabel(double distance) {
+  if (distance < 1000) {
+    return '${distance.toStringAsFixed(0)}|metros';
+  }
+  final km = distance / 1000;
+  return '${km.toStringAsFixed(1)}|km';
+}
+
+class _NavigationErrorState extends StatelessWidget {
+  final String message;
+  final String details;
+
+  const _NavigationErrorState({
+    required this.message,
+    required this.details,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 32),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            details,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }

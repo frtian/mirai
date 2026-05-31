@@ -62,6 +62,7 @@ final currentLocationProvider = FutureProvider.autoDispose<LocationEntity>((
     latitude: locationModel.latitude,
     longitude: locationModel.longitude,
     accuracy: locationModel.accuracy,
+    heading: locationModel.heading,
     timestamp: locationModel.timestamp,
   );
 });

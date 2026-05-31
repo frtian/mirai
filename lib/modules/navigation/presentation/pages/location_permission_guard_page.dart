@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mirai/modules/navigation/presentation/controllers/location_permission_provider.dart';
 import 'package:mirai/modules/navigation/presentation/widgets/location_permission_dialog.dart';
 import 'package:mirai/modules/navigation/presentation/widgets/location_service_dialog.dart';
@@ -23,6 +24,7 @@ class _LocationPermissionGuardPageState
     extends ConsumerState<LocationPermissionGuardPage> {
   late _GuardStage _currentStage;
   bool _serviceDialogShown = false;
+  bool _navigationTriggered = false;
   int _retryCount = 0;
   static const int _maxRetries = 3;
 
@@ -82,14 +84,12 @@ class _LocationPermissionGuardPageState
 
   void _proceedToNavigation() {
     widget.onLocationReady?.call();
-
-    if (widget.navigationPage != null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => widget.navigationPage!),
-      );
-    } else {
-      Navigator.of(context).pop(true);
-    }
+    if (!mounted || _navigationTriggered) return;
+    _navigationTriggered = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.goNamed('navigation');
+    });
   }
 
   Future<void> _showServiceDialog() async {

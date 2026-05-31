@@ -8,6 +8,7 @@ class LocationModel extends LocationEntity {
     required super.latitude,
     required super.longitude,
     super.accuracy,
+    super.heading,
     required super.timestamp,
   });
 
@@ -17,6 +18,7 @@ class LocationModel extends LocationEntity {
       latitude: position.latitude,
       longitude: position.longitude,
       accuracy: position.accuracy,
+      heading: position.heading,
       timestamp: position.timestamp,
     );
   }
@@ -28,6 +30,7 @@ class LocationModel extends LocationEntity {
       latitude: latitude,
       longitude: longitude,
       accuracy: accuracy,
+      heading: heading,
       timestamp: timestamp,
     );
   }
